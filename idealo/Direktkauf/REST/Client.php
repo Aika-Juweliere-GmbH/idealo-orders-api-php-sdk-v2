@@ -21,8 +21,9 @@ namespace idealo\Direktkauf\REST;
 class Client
 {
 
-    protected $sAPILiveUrl = 'https://checkout-api.idealo.com/v1/';
-    protected $sAPITestUrl = 'https://checkout-api.sandbox.idealo.com/v1/';
+    //TODO: Add live url later
+    protected const API_LIVE_URL = '';
+    protected const API_TEST_URL = 'https://orders-sandbox.idealo.com/api/v2/';
     
     /**
      * You can enter a URL to a test file with order-data here
@@ -34,10 +35,16 @@ class Client
      * @var string
      */
     protected $sDebugDirectUrl = false;
-    
-    protected $sToken = null;
+
+    protected string $client;
+    protected string $secret;
+
+    protected bool $isLiveMode = false;
+
+    protected string $authorizationToken = '';
+    protected int $shopId;
+
     protected $iHttpStatus = null;
-    protected $blIsLiveMode = null;
     protected $sCurlError = false;
     protected $iCurlErrno = false;
 
@@ -45,38 +52,343 @@ class Client
     protected $sERPShopSystemVersion = null;
     protected $sIntegrationPartner = null;
     protected $sInterfaceVersion = null;
-    
+
+    protected $sAuthorization = null;
+
+    //That are all urls after the API_LIVE_URL or API_TEST_URL:
     const URL_TYPE_GET_ORDERS = 'getOrders';
     const URL_TYPE_GET_SUPPORTED_PAYMENT_TYPES = 'getSupportedPaymentTypes';
     const URL_TYPE_SEND_ORDER_NR = 'sendOrderNr';
     const URL_TYPE_SEND_FULFILLMENT = 'sendFulfillmentStatus';
     const URL_TYPE_SEND_REVOCATION = 'sendRevocationStatus';
 
-    public function __construct(
-        $sToken = null,
-        $blLive = false,
-        $sERPShopSystem = null,
-        $sERPShopSystemVersion = null,
-        $sIntegrationPartner = null,
-        $sInterfaceVersion = null
-    ) {
-        $this->setToken($sToken);
-        $this->setIsLiveMode($blLive);
-        $this->setERPShopSystem($sERPShopSystem);
-        $this->setERPShopSystemVersion($sERPShopSystemVersion);
-        $this->setIntegrationPartner($sIntegrationPartner);
-        $this->setInterfaceVersion($sInterfaceVersion);
-    }
-    
-    public function setToken($sToken) 
+    /**
+     * @param string $client
+     * @param string $secret
+     * @param bool $isLive
+     */
+    public function __construct(string $client, string $secret, bool $isLive = false)
     {
-        $this->sToken = $sToken;
+        $this->setClient($client);
+        $this->setSecret($secret);
+        $this->setIsLiveMode($isLive);
+
+        $this->setAuthorization();
     }
-    
-    public function getToken() 
+
+    /**
+     * Get all Orders for the shop
+     *
+     * @return array
+     */
+    public function getOrders(): array
     {
-        return $this->sToken;
+        return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders');
     }
+
+    public function getOrder(string $idealoOrderId): array
+    {
+        return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId);
+    }
+
+    public function getNewOrder(): array
+    {
+        return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/new-orders');
+    }
+
+    public function setMerchantOrderNumber(string $idealoOrderId, string $merchantOrderNumber): array
+    {
+        return $this->getJsonArrayFromRequest(
+            $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/merchant-order-number',
+            true,
+            false,
+            [
+                'merchantOrderNumber' => $merchantOrderNumber
+            ]
+        );
+    }
+
+    /**
+     * @param string $idealoOrderId
+     * @param string $carrier
+     * @param array $trackingCode
+     * @return array
+     *
+     * TODO: Maybe set this function and setMerchantOrderNumber to void.
+     */
+    public function setFulfillmentInformation(string $idealoOrderId, string $carrier, array $trackingCode)
+    {
+        return $this->getJsonArrayFromRequest(
+            $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/fulfillment',
+            true,
+            false,
+            [
+                'carrier' => $carrier,
+                'trackingCode' => $trackingCode
+            ]
+        );
+    }
+
+    public function setOrderRevoke(string $idealoOrderId, ?string $sku, int $remainingQuantity, string $reason, ?string $comment)
+    {
+        return $this->getJsonArrayFromRequest(
+            $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/fulfillment',
+            true,
+            false,
+            [
+                'sku'               => $sku,
+                'remainingQuantity' => $remainingQuantity,
+                'reason'            => $reason,
+                'comment'           => $comment
+            ]
+        );
+    }
+
+    /**
+     * @param string $idealoOrderId
+     * @param float $refundAmount - Must be at least 0.01.
+     * @param string $currency - ONLY ISO 4217 currency code!
+     * TODO: Find a way to check this param or you check it in your own code.
+     * TODO: Maybe change the name
+     * @return array
+     */
+    public function setRefundForOrder(string $idealoOrderId, float $refundAmount, string $currency)
+    {
+        if ($refundAmount < 0.01) {
+            return [];
+        }
+        return $this->getJsonArrayFromRequest(
+            $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/refunds',
+            true,
+            false,
+            [
+                'refundAmount' => $refundAmount,
+                'currency' => $currency
+            ]
+        );
+    }
+
+    public function getRefunds(string $idealoOrderId): array
+    {
+        return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/refunds');
+    }
+
+    /**
+     * Client setter
+     *
+     * @param string $client
+     */
+    protected function setClient(string $client)
+    {
+        $this->client = $client;
+    }
+
+    /**
+     * Client getter
+     *
+     * @return string
+     */
+    protected function getClient(): string
+    {
+        return $this->client;
+    }
+
+    /**
+     * Secret setter
+     *
+     * @param string $secret
+     */
+    protected function setSecret(string $secret)
+    {
+        $this->secret = $secret;
+    }
+
+    /**
+     * Secret getter
+     *
+     * @return string
+     */
+    protected function getSecret(): string
+    {
+        return $this->secret;
+    }
+
+    /**
+     * Is live mode setter
+     *
+     * @param bool $isLive
+     */
+    protected function setIsLiveMode(bool $isLive)
+    {
+        $this->isLiveMode = $isLive;
+    }
+
+    /**
+     * Is live mode getter
+     *
+     * @return bool
+     */
+    protected function getIsLiveMode(): bool
+    {
+        return $this->isLiveMode;
+    }
+
+    /**
+     * Authorization setter
+     */
+    protected function setAuthorization()
+    {
+        $token = $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'oauth/token', true, true);
+        $this->authorizationToken = ucfirst($token['token_type']) . ' ' . $token['access_token'];
+        $this->shopId = $token['shop_id'];
+    }
+
+    /**
+     * Authorization getter
+     *
+     * @return string
+     */
+    protected function getAuthorization(): string
+    {
+        return $this->authorizationToken;
+    }
+
+    /**
+     * Shop id getter
+     *
+     * @return int
+     */
+    protected function getShopId(): int
+    {
+        return $this->shopId;
+    }
+
+    /**
+     * Get base URL for API curl requests. (Example: https://orders-sandbox.idealo.com/api/v2/ for sandbox)
+     *
+     * @return string
+     */
+    protected function getBaseUrlForApi(): string
+    {
+        return ($this->getIsLiveMode()) ? self::API_LIVE_URL : self::API_TEST_URL;
+    }
+
+    /**
+     * Get JSON Array with the response of the API.
+     *
+     * @param string $baseUrl
+     * @param bool $hasBody
+     * @param bool $isBasicAuthorization
+     * @param array $body
+     * @return array
+     */
+    protected function getJsonArrayFromRequest(string $baseUrl, bool $hasBody = false, bool $isBasicAuthorization = false, array $body = [])
+    {
+        $sResponse = $this->sendCurlToAPIv2Request($baseUrl, $hasBody, $isBasicAuthorization, false, $body);
+
+        if (!$sResponse) {
+            return [];
+        }
+
+        return (array) json_decode($sResponse, true);
+    }
+
+    protected function getReportingHeaders()
+    {
+        $aHeaders = array();
+        if ($this->getAuthorization() !== '') {
+            $aHeaders[] = 'Authorization: ' . $this->getAuthorization();
+        }
+
+        return $aHeaders;
+    }
+
+    protected function sendCurlToAPIv2Request($sUrl, $hasBody = false, bool $isBasicAuthorization = false, $blIsRetry = false, array $body = [])
+    {
+        //NOTICE: Delete old status properties
+        $this->resetStatusProperties();
+
+        $oCurl = curl_init($sUrl);
+
+        //NOTICE: Set headers for request
+        $aHttpHeaders = $this->getReportingHeaders();
+
+        //NOTICE: $hasBody is the body in requests
+        if($hasBody !== false) {
+            curl_setopt($oCurl, CURLOPT_CUSTOMREQUEST, "POST");
+            //TODO: I dont think that is adding to header
+            if ($isBasicAuthorization === false) {
+                array_push($aHttpHeaders, 'Content-Type: application/json');
+            }
+            curl_setopt($oCurl, CURLOPT_POSTFIELDS, json_encode($body));
+        } else {
+            curl_setopt($oCurl, CURLOPT_CUSTOMREQUEST, "GET");
+        }
+
+        //NOTICE: Set headers to request
+        if (!empty($aHttpHeaders)) {
+            curl_setopt($oCurl, CURLOPT_HTTPHEADER, $aHttpHeaders);
+        }
+
+        curl_setopt($oCurl, CURLOPT_TIMEOUT, 60); //timeout in seconds
+        curl_setopt($oCurl, CURLOPT_HEADER, false);
+        curl_setopt($oCurl, CURLOPT_RETURNTRANSFER, true);
+        if ($isBasicAuthorization) {
+            curl_setopt($oCurl, CURLOPT_USERPWD, $this->getClient() . ':' . $this->getSecret());
+        }
+
+        //NOTICE: Here we send the curl request
+        $sResponse = curl_exec($oCurl);
+
+        $this->setHttpStatus(curl_getinfo($oCurl, CURLINFO_HTTP_CODE));
+
+        if(curl_error($oCurl) != '') {
+            $this->setCurlError(curl_error($oCurl));
+            $this->setCurlErrno(curl_errno($oCurl));
+        }
+
+        curl_close($oCurl);
+
+        //TODO: Is that a infiniti loop?
+        if($sResponse === false && $blIsRetry === false && $this->getCurlError() != '') {
+            $sResponse = $this->sendCurlToAPIv2Request($sUrl, $hasBody, $isBasicAuthorization, true, $body);
+        }
+
+        if ( $this->getHttpStatus() != '200' ) {
+            // API is down
+            if ($this->getHttpStatus() == '502') {
+                $this->setCurlError('API down');
+            } elseif ($this->getHttpStatus() == '401') {
+                $this->setCurlError('Unauthorized');
+            }elseif ($this->getHttpStatus() == '400') {
+                $this->setCurlError('Bad Request');
+            } elseif ($this->getHttpStatus() == '409') {
+                $this->setCurlError('Conflict');
+            } else {
+                $this->setCurlError('');
+            }
+            $sResponse = false;
+        }
+
+        //Only for set Merchant Order Number. Otherwise an empty array would be returned on success and error
+        //TODO: Can we find a better solution for this?
+        if ($this->getHttpStatus() == '204') {
+            return $sResponse = '204';
+        }
+
+        return $sResponse;
+    }
+
+
+
+
+
+
+
+
+
+
+
     
     protected function setHttpStatus($iHttpStatus) 
     {
@@ -86,16 +398,6 @@ class Client
     public function getHttpStatus() 
     {
         return $this->iHttpStatus;
-    }
-    
-    public function setIsLiveMode($blLive) 
-    {
-        $this->blIsLiveMode = $blLive;
-    }
-    
-    public function getIsLiveMode() 
-    {
-        return $this->blIsLiveMode;
     }
     
     protected function setCurlError($sCurlError)
@@ -157,46 +459,6 @@ class Client
     {
         return $this->sInterfaceVersion;
     }
-
-    protected function getRequestUrl($sType, $sOrderNr = false)
-    {
-        if($this->sDebugDirectUrl !== false && $sType != self::URL_TYPE_GET_SUPPORTED_PAYMENT_TYPES) {
-            return $this->sDebugDirectUrl;
-        }
-        
-        if($this->getIsLiveMode() === true) {
-            $sBaseUrl = $this->sAPILiveUrl;
-        } else {
-            $sBaseUrl = $this->sAPITestUrl;
-        }
-        
-        $sUrl = false;
-        switch ($sType) {
-            case self::URL_TYPE_GET_ORDERS:
-                $sUrl = $sBaseUrl.'orders?key='.$this->getToken();
-                break;
-            case self::URL_TYPE_GET_SUPPORTED_PAYMENT_TYPES:
-                $sUrl = $sBaseUrl.'payment/supported?key='.$this->getToken();
-                break;
-            case self::URL_TYPE_SEND_ORDER_NR:
-                $sUrl = $sBaseUrl.'order/'.$sOrderNr.'?key='.$this->getToken();
-                break;
-            case self::URL_TYPE_SEND_FULFILLMENT:
-                $sUrl = $sBaseUrl.'order/'.$sOrderNr.'/fulfillment?key='.$this->getToken();
-                break;
-            case self::URL_TYPE_SEND_REVOCATION:
-                $sUrl = $sBaseUrl.'order/'.$sOrderNr.'/revocation?key='.$this->getToken();
-                break;
-        }
-        return $sUrl;
-    }
-    
-    public function getOrders() 
-    {        
-        $sUrl = $this->getRequestUrl(self::URL_TYPE_GET_ORDERS);        
-        $aOrders = $this->getJsonArrayFromRequest($sUrl);
-        return $aOrders;
-    }
     
     public function getSupportedPaymentTypes()
     {   
@@ -236,36 +498,8 @@ class Client
         return $this->sendCurlRequest($sUrl, $aParams);
     }
 
-    protected function getReportingHeaders()
-    {
-        $aHeaders = array();
-        if ($this->getERPShopSystem()) {
-            $aHeaders[] = 'ERP-Shop-System:'.$this->getERPShopSystem();
-        }
-        if ($this->getERPShopSystemVersion()) {
-            $aHeaders[] = 'ERP-Shop-System-Version:'.$this->getERPShopSystemVersion();
-        }
-        if ($this->getIntegrationPartner()) {
-            $aHeaders[] = 'Integration-Partner:'.$this->getIntegrationPartner();
-        }
-        if ($this->getInterfaceVersion()) {
-            $aHeaders[] = 'Interface-Version:'.$this->getInterfaceVersion();
-        }
-        return $aHeaders;
-    }
 
-    protected function getJsonArrayFromRequest($sUrl)
-    {
-        $aArray = array();
-        
-        $sResponse = $this->sendCurlRequest($sUrl);
-        if($sResponse === false) { // curl-error
-            return false;
-        } elseif($sResponse) {
-            $aArray = json_decode($sResponse, true);
-        }
-        return $aArray;
-    }
+    //TODO Hier weiter machen!
     
     protected function resetStatusProperties()
     {
