@@ -24,17 +24,6 @@ class Client
     //TODO: Add live url later
     protected const API_LIVE_URL = '';
     protected const API_TEST_URL = 'https://orders-sandbox.idealo.com/api/v2/';
-    
-    /**
-     * You can enter a URL to a test file with order-data here
-     * This will be used to bypass the idealo API for testing purposes
-     * Handle with caution!
-     * Testfile needs to be utf8 encoded
-     * Will not be used if set to false
-     * 
-     * @var string
-     */
-    protected $sDebugDirectUrl = false;
 
     protected string $client;
     protected string $secret;
@@ -47,20 +36,6 @@ class Client
     protected $iHttpStatus = null;
     protected $sCurlError = false;
     protected $iCurlErrno = false;
-
-    protected $sERPShopSystem = null;
-    protected $sERPShopSystemVersion = null;
-    protected $sIntegrationPartner = null;
-    protected $sInterfaceVersion = null;
-
-    protected $sAuthorization = null;
-
-    //That are all urls after the API_LIVE_URL or API_TEST_URL:
-    const URL_TYPE_GET_ORDERS = 'getOrders';
-    const URL_TYPE_GET_SUPPORTED_PAYMENT_TYPES = 'getSupportedPaymentTypes';
-    const URL_TYPE_SEND_ORDER_NR = 'sendOrderNr';
-    const URL_TYPE_SEND_FULFILLMENT = 'sendFulfillmentStatus';
-    const URL_TYPE_SEND_REVOCATION = 'sendRevocationStatus';
 
     /**
      * @param string $client
@@ -86,16 +61,30 @@ class Client
         return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders');
     }
 
+    /**
+     * @param string $idealoOrderId
+     *
+     * @return array
+     */
     public function getOrder(string $idealoOrderId): array
     {
         return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId);
     }
 
+    /**
+     * @return array
+     */
     public function getNewOrder(): array
     {
         return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/new-orders');
     }
 
+    /**
+     * @param string $idealoOrderId
+     * @param string $merchantOrderNumber
+     *
+     * @return array
+     */
     public function setMerchantOrderNumber(string $idealoOrderId, string $merchantOrderNumber): array
     {
         return $this->getJsonArrayFromRequest(
@@ -112,11 +101,12 @@ class Client
      * @param string $idealoOrderId
      * @param string $carrier
      * @param array $trackingCode
+     *
      * @return array
      *
      * TODO: Maybe set this function and setMerchantOrderNumber to void.
      */
-    public function setFulfillmentInformation(string $idealoOrderId, string $carrier, array $trackingCode)
+    public function setFulfillmentInformation(string $idealoOrderId, string $carrier, array $trackingCode): array
     {
         return $this->getJsonArrayFromRequest(
             $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/fulfillment',
@@ -129,8 +119,18 @@ class Client
         );
     }
 
-    public function setOrderRevoke(string $idealoOrderId, ?string $sku, int $remainingQuantity, string $reason, ?string $comment)
+    /**
+     * @param string $idealoOrderId
+     * @param string|null $sku
+     * @param int $remainingQuantity
+     * @param string $reason
+     * @param string|null $comment
+     *
+     * @return array
+     */
+    public function setOrderRevoke(string $idealoOrderId, ?string $sku, int $remainingQuantity, string $reason, ?string $comment): array
     {
+        //TODO: Can I send params with null value?
         return $this->getJsonArrayFromRequest(
             $this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/fulfillment',
             true,
@@ -152,7 +152,7 @@ class Client
      * TODO: Maybe change the name
      * @return array
      */
-    public function setRefundForOrder(string $idealoOrderId, float $refundAmount, string $currency)
+    public function setRefundForOrder(string $idealoOrderId, float $refundAmount, string $currency): array
     {
         if ($refundAmount < 0.01) {
             return [];
@@ -168,6 +168,11 @@ class Client
         );
     }
 
+    /**
+     * @param string $idealoOrderId
+     *
+     * @return array
+     */
     public function getRefunds(string $idealoOrderId): array
     {
         return $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'shops/' . $this->getShopId() . '/orders/' . $idealoOrderId . '/refunds');
@@ -178,7 +183,7 @@ class Client
      *
      * @param string $client
      */
-    protected function setClient(string $client)
+    protected function setClient(string $client): void
     {
         $this->client = $client;
     }
@@ -198,7 +203,7 @@ class Client
      *
      * @param string $secret
      */
-    protected function setSecret(string $secret)
+    protected function setSecret(string $secret): void
     {
         $this->secret = $secret;
     }
@@ -218,7 +223,7 @@ class Client
      *
      * @param bool $isLive
      */
-    protected function setIsLiveMode(bool $isLive)
+    protected function setIsLiveMode(bool $isLive): void
     {
         $this->isLiveMode = $isLive;
     }
@@ -236,7 +241,7 @@ class Client
     /**
      * Authorization setter
      */
-    protected function setAuthorization()
+    protected function setAuthorization(): void
     {
         $token = $this->getJsonArrayFromRequest($this->getBaseUrlForApi() . 'oauth/token', true, true);
         $this->authorizationToken = ucfirst($token['token_type']) . ' ' . $token['access_token'];
@@ -280,11 +285,12 @@ class Client
      * @param bool $hasBody
      * @param bool $isBasicAuthorization
      * @param array $body
+     *
      * @return array
      */
-    protected function getJsonArrayFromRequest(string $baseUrl, bool $hasBody = false, bool $isBasicAuthorization = false, array $body = [])
+    protected function getJsonArrayFromRequest(string $baseUrl, bool $hasBody = false, bool $isBasicAuthorization = false, array $body = []): array
     {
-        $sResponse = $this->sendCurlToAPIv2Request($baseUrl, $hasBody, $isBasicAuthorization, false, $body);
+        $sResponse = $this->sendCurlRequest($baseUrl, $hasBody, $isBasicAuthorization, false, $body);
 
         if (!$sResponse) {
             return [];
@@ -293,7 +299,10 @@ class Client
         return (array) json_decode($sResponse, true);
     }
 
-    protected function getReportingHeaders()
+    /**
+     * @return array
+     */
+    protected function getReportingHeaders(): array
     {
         $aHeaders = array();
         if ($this->getAuthorization() !== '') {
@@ -303,12 +312,74 @@ class Client
         return $aHeaders;
     }
 
-    protected function sendCurlToAPIv2Request($sUrl, $hasBody = false, bool $isBasicAuthorization = false, $blIsRetry = false, array $body = [])
+    /**
+     * @param $iHttpStatus
+     */
+    protected function setHttpStatus($iHttpStatus): void
+    {
+        $this->iHttpStatus = $iHttpStatus;
+    }
+
+    /**
+     * @return int
+     */
+    public function getHttpStatus(): int
+    {
+        return $this->iHttpStatus;
+    }
+
+    /**
+     * @param $sCurlError
+     *
+     * @return void
+     */
+    protected function setCurlError($sCurlError): void
+    {
+        $this->sCurlError = $sCurlError;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getCurlError(): bool
+    {
+        return $this->sCurlError;
+    }
+
+    /**
+     * @param $iCurlErrno
+     *
+     * @return void
+     */
+    protected function setCurlErrno($iCurlErrno): void
+    {
+        $this->iCurlErrno = $iCurlErrno;
+    }
+
+    /**
+     * @return bool
+     */
+    public function getCurlErrno(): bool
+    {
+        return $this->iCurlErrno;
+    }
+
+    /**
+     * @return void
+     */
+    protected function resetStatusProperties(): void
+    {
+        $this->setHttpStatus(null);
+        $this->setCurlErrno(false);
+        $this->setCurlError(false);
+    }
+
+    protected function sendCurlRequest($url, $hasBody = false, bool $isBasicAuthorization = false, $isRetry = false, array $body = [])
     {
         //NOTICE: Delete old status properties
         $this->resetStatusProperties();
 
-        $oCurl = curl_init($sUrl);
+        $oCurl = curl_init($url);
 
         //NOTICE: Set headers for request
         $aHttpHeaders = $this->getReportingHeaders();
@@ -316,8 +387,7 @@ class Client
         //NOTICE: $hasBody is the body in requests
         if($hasBody !== false) {
             curl_setopt($oCurl, CURLOPT_CUSTOMREQUEST, "POST");
-            //TODO: I dont think that is adding to header
-            if ($isBasicAuthorization === false) {
+            if (!$isBasicAuthorization) {
                 array_push($aHttpHeaders, 'Content-Type: application/json');
             }
             curl_setopt($oCurl, CURLOPT_POSTFIELDS, json_encode($body));
@@ -349,20 +419,19 @@ class Client
 
         curl_close($oCurl);
 
-        //TODO: Is that a infiniti loop?
-        if($sResponse === false && $blIsRetry === false && $this->getCurlError() != '') {
-            $sResponse = $this->sendCurlToAPIv2Request($sUrl, $hasBody, $isBasicAuthorization, true, $body);
+        if($sResponse === false && $isRetry === false && $this->getCurlError() != '') {
+            $sResponse = $this->sendCurlRequest($url, $hasBody, $isBasicAuthorization, true, $body);
         }
 
-        if ( $this->getHttpStatus() != '200' ) {
+        if ( $this->getHttpStatus() != 200 ) {
             // API is down
-            if ($this->getHttpStatus() == '502') {
+            if ($this->getHttpStatus() == 502) {
                 $this->setCurlError('API down');
-            } elseif ($this->getHttpStatus() == '401') {
+            } elseif ($this->getHttpStatus() == 401) {
                 $this->setCurlError('Unauthorized');
-            }elseif ($this->getHttpStatus() == '400') {
+            }elseif ($this->getHttpStatus() == 400) {
                 $this->setCurlError('Bad Request');
-            } elseif ($this->getHttpStatus() == '409') {
+            } elseif ($this->getHttpStatus() == 409) {
                 $this->setCurlError('Conflict');
             } else {
                 $this->setCurlError('');
@@ -372,190 +441,10 @@ class Client
 
         //Only for set Merchant Order Number. Otherwise an empty array would be returned on success and error
         //TODO: Can we find a better solution for this?
-        if ($this->getHttpStatus() == '204') {
+        if ($this->getHttpStatus() == 204) {
             return $sResponse = '204';
         }
 
         return $sResponse;
     }
-
-
-
-
-
-
-
-
-
-
-
-    
-    protected function setHttpStatus($iHttpStatus) 
-    {
-        $this->iHttpStatus = $iHttpStatus;
-    }
-    
-    public function getHttpStatus() 
-    {
-        return $this->iHttpStatus;
-    }
-    
-    protected function setCurlError($sCurlError)
-    {
-        $this->sCurlError = $sCurlError;
-    }
-    
-    public function getCurlError() 
-    {
-        return $this->sCurlError;
-    }
-    
-    protected function setCurlErrno($iCurlErrno)
-    {
-        $this->iCurlErrno = $iCurlErrno;
-    }
-    
-    public function getCurlErrno() 
-    {
-        return $this->iCurlErrno;
-    }
-
-    public function setERPShopSystem($sERPShopSystem)
-    {
-        $this->sERPShopSystem = $sERPShopSystem;
-    }
-
-    public function getERPShopSystem()
-    {
-        return $this->sERPShopSystem;
-    }
-
-    public function setERPShopSystemVersion($sERPShopSystemVersion)
-    {
-        $this->sERPShopSystemVersion = $sERPShopSystemVersion;
-    }
-
-    public function getERPShopSystemVersion()
-    {
-        return $this->sERPShopSystemVersion;
-    }
-
-    public function setIntegrationPartner($sIntegrationPartner)
-    {
-        $this->sIntegrationPartner = $sIntegrationPartner;
-    }
-
-    public function getIntegrationPartner()
-    {
-        return $this->sIntegrationPartner;
-    }
-
-    public function setInterfaceVersion($sInterfaceVersion)
-    {
-        $this->sInterfaceVersion = $sInterfaceVersion;
-    }
-
-    public function getInterfaceVersion()
-    {
-        return $this->sInterfaceVersion;
-    }
-    
-    public function getSupportedPaymentTypes()
-    {   
-        $sUrl = $this->getRequestUrl(self::URL_TYPE_GET_SUPPORTED_PAYMENT_TYPES);
-        $aPaymentsTypes = $this->getJsonArrayFromRequest($sUrl);
-        return $aPaymentsTypes;
-    }
-    
-    public function sendOrderNr($sIdealoOrderNr, $sShopOrderNr)
-    {
-        $sUrl = $this->getRequestUrl(self::URL_TYPE_SEND_ORDER_NR, $sIdealoOrderNr);
-        $aParams = array(
-            'merchant_order_no' => $sShopOrderNr,
-        );
-        return $this->sendCurlRequest($sUrl, $aParams);
-    }
-    
-    public function sendFulfillmentStatus($sIdealoOrderNr, $sTrackingCode = '', $sCarrier = '')
-    {
-        $sUrl = $this->getRequestUrl(self::URL_TYPE_SEND_FULFILLMENT, $sIdealoOrderNr);
-        $aParams = array();
-        if(!empty($sTrackingCode)) {
-            $aParams['tracking_number'] = $sTrackingCode;
-            $aParams['carrier'] = $sCarrier;
-        }
-        return $this->sendCurlRequest($sUrl, $aParams);
-    }
-    
-    public function sendRevocationStatus($sIdealoOrderNr, $sReason, $sComment = false)
-    {
-        $sUrl = $this->getRequestUrl(self::URL_TYPE_SEND_REVOCATION, $sIdealoOrderNr);
-        $aParams = array();
-        $aParams['reason'] = $sReason;
-        if($sComment !== false) {
-            $aParams['comment'] = $sComment;
-        }
-        return $this->sendCurlRequest($sUrl, $aParams);
-    }
-
-
-    //TODO Hier weiter machen!
-    
-    protected function resetStatusProperties()
-    {
-        $this->setHttpStatus(null);
-        $this->setCurlErrno(false);
-        $this->setCurlError(false);
-    }
-    
-    protected function sendCurlRequest($sUrl, $aParams = false, $blIsRetry = false) 
-    {
-        $this->resetStatusProperties();
-
-        $oCurl = curl_init($sUrl);
-
-        $aHttpHeaders = $this->getReportingHeaders();
-        if($aParams !== false) {
-            curl_setopt($oCurl, CURLOPT_CUSTOMREQUEST, "PUT");
-            $aHttpHeaders[] = 'Content-Type: application/json';
-            curl_setopt($oCurl, CURLOPT_POSTFIELDS, json_encode($aParams));
-        } else {
-            curl_setopt($oCurl, CURLOPT_CUSTOMREQUEST, "GET");
-        }
-        if (!empty($aHttpHeaders)) {
-            curl_setopt($oCurl, CURLOPT_HTTPHEADER, $aHttpHeaders);
-        }
-        curl_setopt($oCurl, CURLOPT_TIMEOUT, 60); //timeout in seconds
-        curl_setopt($oCurl, CURLOPT_HEADER, false);
-        curl_setopt($oCurl, CURLOPT_RETURNTRANSFER, true);
-        
-        $sResponse = curl_exec($oCurl);
-
-        $this->setHttpStatus(curl_getinfo($oCurl, CURLINFO_HTTP_CODE));     
-        
-        if(curl_error($oCurl) != '') {
-            $this->setCurlError(curl_error($oCurl));
-            $this->setCurlErrno(curl_errno($oCurl));
-        }
-
-        curl_close($oCurl);
-        
-        if($sResponse === false && $blIsRetry === false && $this->getCurlError() != '') {
-            $sResponse = $this->sendCurlRequest($sUrl, $aParams, true);
-        }
-        
-        if ( $this->getHttpStatus() != '200' ) {
-            // API is down
-            if ($this->getHttpStatus() == '502') {
-                $this->setCurlError('API down');
-            } elseif ($this->getHttpStatus() == '401') {
-                $this->setCurlError('Unauthorized');
-            } else {
-                $this->setCurlError('');
-            }
-            $sResponse = false;
-        }
-        return $sResponse;
-    }
-
 }
