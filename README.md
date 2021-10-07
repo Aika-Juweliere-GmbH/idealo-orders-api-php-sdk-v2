@@ -1,19 +1,20 @@
-# idealo Orders-API: PHP SDK
+# idealo Orders-API v2: PHP SDK
 # Implementation Guide
 
 ## License and usage
 This SDK can be used under the conditions of the Apache License 2.0, see LICENSE for details
 
 ## Technical requirements
-- Standard Apache webserver with at least PHP 5.3
+- Standard Apache webserver with at least PHP 7.4
 - The curl library for PHP
 
 ## Introduction
 
+This is not an official library update for the Orders API v2 from Idealo, but from Uhrenlounge Dresden!
+
 The implementation of the idealo SDK is  easy and straightforward.
-How it is used can be seen in the "sandbox.php" file located in the same folder as this readme file.
-To test to idealo orders API, put the SDK into a folder on your webserver, open `http://<hostname>/path_to_sdk/sandbox.php` and enter the sandbox token you received from the idealo technical account management (tam@idealo.de).
-The SDK only consists of the client class right now, which can be found in the namespace idealo\Direktkauf\REST.
+Please test and integrate this SDK only with Idealo's sandbox environment. Generate an appropriate key on the Idealo Business page.
+You have any question? Than write me a mail. tom.gottschlich@uhrenlounge.de
 
 ## Basics
 
@@ -27,117 +28,242 @@ Then you can instantiate the REST-client-class from anywhere in your code like t
 	$oClient = new idealo\Direktkauf\Client();
 
 The client needs 2 parameters:
-1. token - The authentification token for idealo
-2. isLiveMode - true for live-mode and false for test-mode
+1. client - The client key for the authentification
+2. secret - The secret key for the authentification (You find this value only when you generate a new API key)
+3. isLive - true for live-mode and false for test-mode (Is optional. Default is false)
 
 You can either put them right in the constructor:
 
-	$sToken = 'xyz';
-	$blLiveMode = true;
-	$oClient = new Fatchip\REST\Client($sToken, $blLiveMode);
-
-or you can set them with their getters:
-
-	$oClient = new idealo\Direktkauf\Client();
-	$oClient->setToken('xyz');
-	$oClient->setIsLiveMode(true);
+	$client = '4i23uh4i2-iom4o324-m42m-opm32km4';
+    $secret = 'nfn78sdfn!osadf?32';
+	$isLiveMode = true;
+	$oClient = new idealo\Direktkauf\Client($client, $secret, $isLiveMode);
 
 ## Implementation
 
-With this client object you have direct access to all the REST-API functions from idealo.
+With this client object you have direct access to all the v2 REST-API functions from idealo.
 
-At the moment there the following 5 requests available:
+At the moment there the following 10 requests available (5 more than in the v1 REST-API from idealo): 
 
-### `$oClient->getOrders()`
+### `$oClient->getOrders(): array`
 
-Requests all open orders from idealo.
+Requests all orders from idealo.
 They are delivered as an associative array, directly like idealo delivers them in the following format:
 
+    {
+        "content": [
+            {
+              "idealoOrderId": "008HPCL48R",
+              "created": "2021-10-05T12:54:46Z",
+              "updated": "2021-10-05T12:54:46.336Z",
+              "status": "PROCESSING",
+              "currency": "EUR",
+              "offersPrice": "16180.00",
+              "grossPrice": "16180.00",
+              "shippingCosts": "0.00",
+              "lineItems": [
+                {
+                  "title": "Certina Heritage DS Caimano Gent C017.410.11.057.00",
+                  "price": "280.00",
+                  "priceRangeAmount": "5.60",
+                  "quantity": 1,
+                  "sku": "1295",
+                  "merchantDeliveryText": "1-2+Werktage"
+                },
+                {
+                  "title": "Baume & Mercier Riviera Gent 42mm M0A10620",
+                  "price": "2650.00",
+                  "quantity": 6,
+                  "sku": "28465",
+                  "merchantDeliveryText": "1-2+Werktage"
+                }
+              ],
+              "customer": {
+                "email": "m-jk0vb80vm4h87u66@checkout-stg.idealo.de"
+              },
+              "payment": {
+                "paymentMethod": "PAYPAL",
+                "transactionId": "snakeoil-0a0e054"
+              },
+              "billingAddress": {
+                "salutation": "MR",
+                "firstName": "Sabine",
+                "lastName": "Fischer",
+                "addressLine1": "Straße 82",
+                "postalCode": "48381",
+                "city": "Ort",
+                "countryCode": "DE"
+              },
+              "shippingAddress": {
+                "salutation": "MR",
+                "firstName": "Sabine",
+                "lastName": "Fischer",
+                "addressLine1": "Straße 82",
+                "postalCode": "48381",
+                "city": "Ort",
+                "countryCode": "DE"
+              },
+              "fulfillment": {
+                "method": "POSTAL",
+                "tracking": [],
+                "options": []
+              },
+              "refunds": []
+            },
+            ...
+        ],
+        "totalElements": 36,
+        "totalPages": 1
+    }
 
-	Array
-	(
-		[order_number] => ZNQQQKBP
-		[created_at] => 2015-07-17T17:19:25.000+02:00
-		[status] => PROCESSING
-		[currency] => EUR
-		[total_line_items_price] => 225.99
-		[total_price] => 228.98
-		[total_shipping] => 2.99
-		[total_tax] => 36.08
-		[vat_rate] => 19.0
-		[updated_at] => 2015-07-17T17:19:25.000+02:00
-		[customer] => Array
-			(
-				[email] => m-u2sc9fn6467ujqcw@checkout-sandbox.lvl.bln
-				[phone] => 
-			)
+### `$oClient->getOrder(string $idealoOrderId): array`
 
-		[shipping_address] => Array
-			(
-				[address1] => Straße 123
-				[address2] => 
-				[city] => Ort
-				[country] => DE
-				[given_name] => First
-				[family_name] => Name
-				[zip] => 66666
-			)
+Get a specific order by idealoOrderId:
 
-		[billing_address] => Array
-			(
-				[address1] => Straße 123
-				[address2] => 
-				[city] => Ort
-				[country] => DE
-				[given_name] => First
-				[family_name] => Name
-				[zip] => 66666
-			)
+	{
+        "idealoOrderId": "008HPCL48R",
+        "created": "2021-10-05T12:54:46Z",
+        "updated": "2021-10-05T12:54:46.336Z",
+        "status": "PROCESSING",
+        "currency": "EUR",
+        "offersPrice": "16180.00",
+        "grossPrice": "16180.00",
+        "shippingCosts": "0.00",
+        "lineItems": [
+            {
+                "title": "Certina Heritage DS Caimano Gent C017.410.11.057.00",
+                "price": "280.00",
+                "priceRangeAmount": "5.60",
+                "quantity": 1,
+                "sku": "1295",
+                "merchantDeliveryText": "1-2+Werktage"
+            },
+            {
+                "title": "Baume & Mercier Riviera Gent 42mm M0A10620",
+                "price": "2650.00",
+                "quantity": 6,
+                "sku": "28465",
+                "merchantDeliveryText": "1-2+Werktage"
+            }
+        ],
+        "customer": {
+            "email": "m-jk0vb80vm4h87u66@checkout-stg.idealo.de"
+        },
+        "payment": {
+            "paymentMethod": "PAYPAL",
+            "transactionId": "snakeoil-0a0e054"
+        },
+        "billingAddress": {
+            "salutation": "MR",
+            "firstName": "Sabine",
+            "lastName": "Fischer",
+            "addressLine1": "Straße 82",
+            "postalCode": "48381",
+            "city": "Ort",
+            "countryCode": "DE"
+        },
+        "shippingAddress": {
+            "salutation": "MR",
+            "firstName": "Sabine",
+            "lastName": "Fischer",
+            "addressLine1": "Straße 82",
+            "postalCode": "48381",
+            "city": "Ort",
+            "countryCode": "DE"
+        },
+        "fulfillment": {
+            "method": "POSTAL",
+            "tracking": [],
+            "options": []
+        },
+        "refunds": []
+    }
 
-		[line_items] => Array
-			(
-				[0] => Array
-					(
-						[price] => 225.99
-						[quantity] => 1
-						[sku] => ABC234
-						[title] => Canon EOS 700D + 18-55 IS STM
-					)
+### `$oClient->getNewOrder(): array`
 
-			)
-
-		[fulfillment] => Array
-			(
-				[type] => POSTAL
-				[carrier] => 
-				[transaction_code] => 
-				[fulfillment_options] => Array
-					(
-					)
-
-			)
-
-		[payment] => Array
-			(
-				[payment_method] => CREDITCARD
-				[transaction_id] => snakeoil-f026e9c
-			)
-
-	)
-
-
-### `$oClient->getSupportedPaymentTypes()` 
-
-Delivers all currently support payment types in the following format:
-
-	Array
-	(
-		[CREDITCARD] => Credit Card Payment Method (Heidelpay)
-		[SOFORT] => SOFORT Überweisung Payment Method
-		[PAYPAL] => PayPal Payment Method
-	)
-
-### `$oClient->sendOrderNr($sIdealoOrderNr, $sShopOrderNr)` 
+    {
+        "idealoOrderId" : "A1B2C3D4",
+        "merchantOrderNumber" : "1234ABC",
+        "created" : "2021-01-01T00:00:00Z",
+        "updated" : "2021-01-01T00:00:00Z",
+        "status" : "PROCESSING",
+        "currency" : "EUR",
+        "offersPrice" : "50.85",
+        "grossPrice" : "53.84",
+        "shippingCosts" : "2.99",
+        "lineItems" : [
+            {
+                "title" : "Example product 1",
+                "price" : "30.55",
+                "priceRangeAmount" : "1.44",
+                "quantity" : 1,
+                "sku" : "product-sku-12345",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            }, 
+            {
+                "title" : "Example product 2",
+                "price" : "10.15",
+                "quantity" : 2,
+                "sku" : "product-sku-5648",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            } 
+        ],
+        "customer" : {
+            "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+            "phone" : "030-1231234"
+        },
+        "payment" : {
+            "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+            "transactionId" : "acb-123"
+        },
+        "billingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "shippingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "fulfillment" : {
+            "method" : "FORWARDING",
+            "tracking" : [ {
+                "code" : "xyz1234",
+                "carrier" : "Cargo"
+            } ],
+            "options" : [ {
+                "forwardOption" : "TWO_MAN_DELIVERY",
+                "price" : "2.99"
+            } ]
+        },
+        "refunds" : [ {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:43:33.433517Z",
+            "updated" : "2021-09-08T09:43:33.433518Z"
+        } ],
+        "voucher" : {
+            "code" : "FXWFGE (30%, max. 5 EUR)"
+        }
+    } 
 
 #### Parameters
 
