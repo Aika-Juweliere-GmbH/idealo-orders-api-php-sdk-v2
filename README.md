@@ -350,7 +350,7 @@ ___
 
     No body returned for response
 
-####Example response for invalid requests
+#### Example response for invalid requests
 
     {
         "type" : "about:blank",
