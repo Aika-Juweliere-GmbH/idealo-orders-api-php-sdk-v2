@@ -1,12 +1,18 @@
 # idealo Orders-API v2: PHP SDK
 # Implementation Guide
 
+___
+
 ## License and usage
 This SDK can be used under the conditions of the Apache License 2.0, see LICENSE for details
+
+___
 
 ## Technical requirements
 - Standard Apache webserver with at least PHP 7.4
 - The curl library for PHP
+
+___
 
 ## Introduction
 
@@ -15,6 +21,8 @@ This is not an official library update for the Orders API v2 from Idealo, but fr
 The implementation of the idealo SDK is  easy and straightforward.
 Please test and integrate this SDK only with Idealo's sandbox environment. Generate an appropriate key on the Idealo Business page.
 You have any question? Than write me a mail. tom.gottschlich@uhrenlounge.de
+
+___
 
 ## Basics
 
@@ -39,11 +47,15 @@ You can either put them right in the constructor:
 	$isLiveMode = true;
 	$oClient = new idealo\Direktkauf\Client($client, $secret, $isLiveMode);
 
+___
+
 ## Implementation
 
 With this client object you have direct access to all the v2 REST-API functions from idealo.
 
 At the moment there the following 10 requests available (5 more than in the v1 REST-API from idealo): 
+
+___
 
 ### `$oClient->getOrders(): array`
 
@@ -51,133 +63,184 @@ Requests all orders from idealo.
 They are delivered as an associative array, directly like idealo delivers them in the following format:
 
     {
-        "content": [
-            {
-              "idealoOrderId": "008HPCL48R",
-              "created": "2021-10-05T12:54:46Z",
-              "updated": "2021-10-05T12:54:46.336Z",
-              "status": "PROCESSING",
-              "currency": "EUR",
-              "offersPrice": "16180.00",
-              "grossPrice": "16180.00",
-              "shippingCosts": "0.00",
-              "lineItems": [
+        "content" : [ {
+            "idealoOrderId" : "A1B2C3D4",
+            "merchantOrderNumber" : "1234ABC",
+            "created" : "2021-01-01T00:00:00Z",
+            "updated" : "2021-01-01T00:00:00Z",
+            "status" : "PROCESSING",
+            "currency" : "EUR",
+            "offersPrice" : "50.85",
+            "grossPrice" : "53.84",
+            "shippingCosts" : "2.99",
+            "lineItems" : [ 
                 {
-                  "title": "Certina Heritage DS Caimano Gent C017.410.11.057.00",
-                  "price": "280.00",
-                  "priceRangeAmount": "5.60",
-                  "quantity": 1,
-                  "sku": "1295",
-                  "merchantDeliveryText": "1-2+Werktage"
-                },
+                    "title" : "Example product 1",
+                    "price" : "30.55",
+                    "priceRangeAmount" : "1.44",
+                    "quantity" : 1,
+                    "sku" : "product-sku-12345",
+                    "merchantId" : "merchant_12345",
+                    "merchantName" : "Example Electronics Ltd",
+                    "merchantDeliveryText" : "Delivered within 3 working days"
+                }, 
                 {
-                  "title": "Baume & Mercier Riviera Gent 42mm M0A10620",
-                  "price": "2650.00",
-                  "quantity": 6,
-                  "sku": "28465",
-                  "merchantDeliveryText": "1-2+Werktage"
-                }
-              ],
-              "customer": {
-                "email": "m-jk0vb80vm4h87u66@checkout-stg.idealo.de"
-              },
-              "payment": {
-                "paymentMethod": "PAYPAL",
-                "transactionId": "snakeoil-0a0e054"
-              },
-              "billingAddress": {
-                "salutation": "MR",
-                "firstName": "Sabine",
-                "lastName": "Fischer",
-                "addressLine1": "Straße 82",
-                "postalCode": "48381",
-                "city": "Ort",
-                "countryCode": "DE"
-              },
-              "shippingAddress": {
-                "salutation": "MR",
-                "firstName": "Sabine",
-                "lastName": "Fischer",
-                "addressLine1": "Straße 82",
-                "postalCode": "48381",
-                "city": "Ort",
-                "countryCode": "DE"
-              },
-              "fulfillment": {
-                "method": "POSTAL",
-                "tracking": [],
-                "options": []
-              },
-              "refunds": []
+                    "title" : "Example product 2",
+                    "price" : "10.15",
+                    "quantity" : 2,
+                    "sku" : "product-sku-5648",
+                    "merchantId" : "merchant_12345",
+                    "merchantName" : "Example Electronics Ltd",
+                    "merchantDeliveryText" : "Delivered within 3 working days"
+                } 
+            ],
+            "customer" : {
+                "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+                "phone" : "030-1231234"
             },
-            ...
-        ],
-        "totalElements": 36,
-        "totalPages": 1
+            "payment" : {
+                "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+                "transactionId" : "acb-123"
+            },
+            "billingAddress" : {
+                "salutation" : "MR",
+                "firstName" : "Max",
+                "lastName" : "Mustermann",
+                "addressLine1" : "Ritterstraße 11",
+                "addressLine2" : "c/o idealo",
+                "postalCode" : "10969",
+                "city" : "Berlin",
+                "countryCode" : "DE"
+            },
+            "shippingAddress" : {
+                "salutation" : "MR",
+                "firstName" : "Max",
+                "lastName" : "Mustermann",
+                "addressLine1" : "Ritterstraße 11",
+                "addressLine2" : "c/o idealo",
+                "postalCode" : "10969",
+                "city" : "Berlin",
+                "countryCode" : "DE"
+            },
+            "fulfillment" : {
+                "method" : "FORWARDING",
+                "tracking" : [ {
+                    "code" : "xyz1234",
+                    "carrier" : "Cargo"
+                } ],
+                "options" : [ {
+                    "forwardOption" : "TWO_MAN_DELIVERY",
+                    "price" : "2.99"
+                } ]
+            },
+            "refunds" : [ {
+                "refundId" : "example-refund-id",
+                "refundTransactionId" : "example-refund-transaction-id",
+                "status" : "OPEN",
+                "currency" : "EUR",
+                "refundAmount" : 1.99,
+                "created" : "2021-09-08T09:43:33.666273Z",
+                "updated" : "2021-09-08T09:43:33.666273Z"
+            } ],
+            "voucher" : {
+                "code" : "FXWFGE (30%, max. 5 EUR)"
+            }
+        } ],
+        "totalElements" : 1,
+        "totalPages" : 1
     }
+
+___
 
 ### `$oClient->getOrder(string $idealoOrderId): array`
 
 Get a specific order by idealoOrderId:
 
 	{
-        "idealoOrderId": "008HPCL48R",
-        "created": "2021-10-05T12:54:46Z",
-        "updated": "2021-10-05T12:54:46.336Z",
-        "status": "PROCESSING",
-        "currency": "EUR",
-        "offersPrice": "16180.00",
-        "grossPrice": "16180.00",
-        "shippingCosts": "0.00",
-        "lineItems": [
+        "idealoOrderId" : "A1B2C3D4",
+        "merchantOrderNumber" : "1234ABC",
+        "created" : "2021-01-01T00:00:00Z",
+        "updated" : "2021-01-01T00:00:00Z",
+        "status" : "PROCESSING",
+        "currency" : "EUR",
+        "offersPrice" : "50.85",
+        "grossPrice" : "53.84",
+        "shippingCosts" : "2.99",
+        "lineItems" : [ 
             {
-                "title": "Certina Heritage DS Caimano Gent C017.410.11.057.00",
-                "price": "280.00",
-                "priceRangeAmount": "5.60",
-                "quantity": 1,
-                "sku": "1295",
-                "merchantDeliveryText": "1-2+Werktage"
-            },
+                "title" : "Example product 1",
+                "price" : "30.55",
+                "priceRangeAmount" : "1.44",
+                "quantity" : 1,
+                "sku" : "product-sku-12345",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            }, 
             {
-                "title": "Baume & Mercier Riviera Gent 42mm M0A10620",
-                "price": "2650.00",
-                "quantity": 6,
-                "sku": "28465",
-                "merchantDeliveryText": "1-2+Werktage"
-            }
+                "title" : "Example product 2",
+                "price" : "10.15",
+                "quantity" : 2,
+                "sku" : "product-sku-5648",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            } 
         ],
-        "customer": {
-            "email": "m-jk0vb80vm4h87u66@checkout-stg.idealo.de"
+        "customer" : {
+            "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+            "phone" : "030-1231234"
         },
-        "payment": {
-            "paymentMethod": "PAYPAL",
-            "transactionId": "snakeoil-0a0e054"
+        "payment" : {
+            "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+            "transactionId" : "acb-123"
         },
-        "billingAddress": {
-            "salutation": "MR",
-            "firstName": "Sabine",
-            "lastName": "Fischer",
-            "addressLine1": "Straße 82",
-            "postalCode": "48381",
-            "city": "Ort",
-            "countryCode": "DE"
+        "billingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
         },
-        "shippingAddress": {
-            "salutation": "MR",
-            "firstName": "Sabine",
-            "lastName": "Fischer",
-            "addressLine1": "Straße 82",
-            "postalCode": "48381",
-            "city": "Ort",
-            "countryCode": "DE"
+        "shippingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
         },
-        "fulfillment": {
-            "method": "POSTAL",
-            "tracking": [],
-            "options": []
+        "fulfillment" : {
+            "method" : "FORWARDING",
+            "tracking" : [ {
+                "code" : "xyz1234",
+                "carrier" : "Cargo"
+            } ],
+            "options" : [ {
+                "forwardOption" : "TWO_MAN_DELIVERY",
+                "price" : "2.99"
+            } ]
         },
-        "refunds": []
+        "refunds" : [ {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:43:34.090744Z",
+            "updated" : "2021-09-08T09:43:34.090744Z"
+        } ],
+        "voucher" : {
+            "code" : "FXWFGE (30%, max. 5 EUR)"
+        }
     }
+
+___
 
 ### `$oClient->getNewOrder(): array`
 
@@ -263,35 +326,60 @@ Get a specific order by idealoOrderId:
         "voucher" : {
             "code" : "FXWFGE (30%, max. 5 EUR)"
         }
-    } 
+    }
 
-#### Parameters
+### `$oClient->setMerchantOrderNumber(string $idealoOrderId, string $merchantOrderNumber): array`
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sShopOrderNr` - The order-nr this idealo order received in your shop.
+    No body returned for response
 
-This request transmits and connects the order-number from your shop-system to the idealo-order.
+___
 
-### `sendFulfillmentStatus($sIdealoOrderNr, $sTrackingCode, $sCarrier)`
+### `$oClient->setFulfillmentInformation(string $idealoOrderId, string $carrier, array $trackingCode): array`
 
-#### Parameters
+    No body returned for response
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sTrackingCode` (optional) - The trackingcode for the current order
-`sCarrier` (optional) - The shipping-carrier for the current order ( DHL, DPD, UPS, FedEx, ...)
+___
 
-This request marks the order in idealo as shipped and adds trackingcode and carrier information to the order.
+### `$oClient->setOrderRevoke(string $idealoOrderId, ?string $sku, int $remainingQuantity, string $reason, ?string $comment): array`
 
-### `sendRevocationStatus($sIdealoOrderNr, $sReason, $sComment)` 
+    No body returned for response
 
-#### Parameters
+___
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sReason` - The reason of revocation - can be "CUSTOMER_REVOKE", "MERCHANT_DECLINE" or "RETOUR"
-`sComment` (optional) - A 255 digit text with a comment from the merchant
+### `$oClient->setRefundForOrder(string $idealoOrderId, float $refundAmount, string $currency): array`
 
+    No body returned for response
 
-For more information concerning the requests, have a look at the API documentation and developer guide.
+####Example response for invalid requests
+
+    {
+        "type" : "about:blank",
+        "title" : "This order is not refundable as it was not paid using 'IDEALO_CHECKOUT_PAYMENTS'.",
+        "instance" : "https://orders.idealo.com/api/v2/shops/12345/orders/A1B2C3D4/refunds",
+        "reason" : "ORDER_NOT_PAID_USING_IDEALO_CHECKOUT_PAYMENTS"
+    }
+
+Reason | Description
+--- | ---- |
+ORDER_NOT_PAID_USING_IDEALO_CHECKOUT_PAYMENTS | Occurs if the order has not been paid by IDEALO_CHECKOUT_PAYMENTS
+REFUND_PERIOD_EXCEEDED | Occurs if the order is older than 60 days and has been in the state COMPLETED.
+REFUND_AMOUNT_EXCEEDS_ORDER_PRICE | Occurs if the sum of all refunds exceeds the total price of the order
+
+___
+
+### `$oClient->getRefunds(string $idealoOrderId): array`
+
+    [ 
+        {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:41:39.887112Z",
+            "updated" : "2021-09-08T09:41:39.887115Z"
+        } 
+    ]
 
 ## Error-handling
 
@@ -313,9 +401,3 @@ In the idealo API documentation, you can find a list with the HTTP status error-
 ### Logging
 
 Errors will be logged to the default webserver error log.
-
-### Testing
-
-You can configure a direct link to a test-file filled with json-encoded orders like you would receive them directly from the API.
-You have to enter the link in the "$sDebugDirectUrl" parameter in the idealo/Direktkauf/REST/Client.php file for example like this:
-"http://*YOUR_SERVER_HERE*/order_test_file.txt"
