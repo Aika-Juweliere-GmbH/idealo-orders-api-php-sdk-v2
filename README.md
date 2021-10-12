@@ -1,19 +1,28 @@
-# idealo Orders-API: PHP SDK
+# idealo Orders-API v2: PHP SDK
 # Implementation Guide
+
+___
 
 ## License and usage
 This SDK can be used under the conditions of the Apache License 2.0, see LICENSE for details
 
+___
+
 ## Technical requirements
-- Standard Apache webserver with at least PHP 5.3
+- Standard Apache webserver with at least PHP 7.4
 - The curl library for PHP
+
+___
 
 ## Introduction
 
+This is not an official library update for the Orders API v2 from Idealo, but from Uhrenlounge Dresden!
+
 The implementation of the idealo SDK is  easy and straightforward.
-How it is used can be seen in the "sandbox.php" file located in the same folder as this readme file.
-To test to idealo orders API, put the SDK into a folder on your webserver, open `http://<hostname>/path_to_sdk/sandbox.php` and enter the sandbox token you received from the idealo technical account management (tam@idealo.de).
-The SDK only consists of the client class right now, which can be found in the namespace idealo\Direktkauf\REST.
+Please test and integrate this SDK only with Idealo's sandbox environment. Generate an appropriate key on the Idealo Business page.
+You have any question? Than write me a mail. tom.gottschlich@uhrenlounge.de
+
+___
 
 ## Basics
 
@@ -27,145 +36,350 @@ Then you can instantiate the REST-client-class from anywhere in your code like t
 	$oClient = new idealo\Direktkauf\Client();
 
 The client needs 2 parameters:
-1. token - The authentification token for idealo
-2. isLiveMode - true for live-mode and false for test-mode
+1. client - The client key for the authentification
+2. secret - The secret key for the authentification (You find this value only when you generate a new API key)
+3. isLive - true for live-mode and false for test-mode (Is optional. Default is false)
 
 You can either put them right in the constructor:
 
-	$sToken = 'xyz';
-	$blLiveMode = true;
-	$oClient = new Fatchip\REST\Client($sToken, $blLiveMode);
+	$client = '4i23uh4i2-iom4o324-m42m-opm32km4';
+    $secret = 'nfn78sdfn!osadf?32';
+	$isLiveMode = true;
+	$oClient = new idealo\Direktkauf\Client($client, $secret, $isLiveMode);
 
-or you can set them with their getters:
-
-	$oClient = new idealo\Direktkauf\Client();
-	$oClient->setToken('xyz');
-	$oClient->setIsLiveMode(true);
+___
 
 ## Implementation
 
-With this client object you have direct access to all the REST-API functions from idealo.
+With this client object you have direct access to all the v2 REST-API functions from idealo.
 
-At the moment there the following 5 requests available:
+At the moment there the following 10 requests available (5 more than in the v1 REST-API from idealo): 
 
-### `$oClient->getOrders()`
+___
 
-Requests all open orders from idealo.
+### `$oClient->getOrders(): array`
+
+Requests all orders from idealo.
 They are delivered as an associative array, directly like idealo delivers them in the following format:
 
+    {
+        "content" : [ {
+            "idealoOrderId" : "A1B2C3D4",
+            "merchantOrderNumber" : "1234ABC",
+            "created" : "2021-01-01T00:00:00Z",
+            "updated" : "2021-01-01T00:00:00Z",
+            "status" : "PROCESSING",
+            "currency" : "EUR",
+            "offersPrice" : "50.85",
+            "grossPrice" : "53.84",
+            "shippingCosts" : "2.99",
+            "lineItems" : [ 
+                {
+                    "title" : "Example product 1",
+                    "price" : "30.55",
+                    "priceRangeAmount" : "1.44",
+                    "quantity" : 1,
+                    "sku" : "product-sku-12345",
+                    "merchantId" : "merchant_12345",
+                    "merchantName" : "Example Electronics Ltd",
+                    "merchantDeliveryText" : "Delivered within 3 working days"
+                }, 
+                {
+                    "title" : "Example product 2",
+                    "price" : "10.15",
+                    "quantity" : 2,
+                    "sku" : "product-sku-5648",
+                    "merchantId" : "merchant_12345",
+                    "merchantName" : "Example Electronics Ltd",
+                    "merchantDeliveryText" : "Delivered within 3 working days"
+                } 
+            ],
+            "customer" : {
+                "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+                "phone" : "030-1231234"
+            },
+            "payment" : {
+                "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+                "transactionId" : "acb-123"
+            },
+            "billingAddress" : {
+                "salutation" : "MR",
+                "firstName" : "Max",
+                "lastName" : "Mustermann",
+                "addressLine1" : "Ritterstraße 11",
+                "addressLine2" : "c/o idealo",
+                "postalCode" : "10969",
+                "city" : "Berlin",
+                "countryCode" : "DE"
+            },
+            "shippingAddress" : {
+                "salutation" : "MR",
+                "firstName" : "Max",
+                "lastName" : "Mustermann",
+                "addressLine1" : "Ritterstraße 11",
+                "addressLine2" : "c/o idealo",
+                "postalCode" : "10969",
+                "city" : "Berlin",
+                "countryCode" : "DE"
+            },
+            "fulfillment" : {
+                "method" : "FORWARDING",
+                "tracking" : [ {
+                    "code" : "xyz1234",
+                    "carrier" : "Cargo"
+                } ],
+                "options" : [ {
+                    "forwardOption" : "TWO_MAN_DELIVERY",
+                    "price" : "2.99"
+                } ]
+            },
+            "refunds" : [ {
+                "refundId" : "example-refund-id",
+                "refundTransactionId" : "example-refund-transaction-id",
+                "status" : "OPEN",
+                "currency" : "EUR",
+                "refundAmount" : 1.99,
+                "created" : "2021-09-08T09:43:33.666273Z",
+                "updated" : "2021-09-08T09:43:33.666273Z"
+            } ],
+            "voucher" : {
+                "code" : "FXWFGE (30%, max. 5 EUR)"
+            }
+        } ],
+        "totalElements" : 1,
+        "totalPages" : 1
+    }
 
-	Array
-	(
-		[order_number] => ZNQQQKBP
-		[created_at] => 2015-07-17T17:19:25.000+02:00
-		[status] => PROCESSING
-		[currency] => EUR
-		[total_line_items_price] => 225.99
-		[total_price] => 228.98
-		[total_shipping] => 2.99
-		[total_tax] => 36.08
-		[vat_rate] => 19.0
-		[updated_at] => 2015-07-17T17:19:25.000+02:00
-		[customer] => Array
-			(
-				[email] => m-u2sc9fn6467ujqcw@checkout-sandbox.lvl.bln
-				[phone] => 
-			)
+___
 
-		[shipping_address] => Array
-			(
-				[address1] => Straße 123
-				[address2] => 
-				[city] => Ort
-				[country] => DE
-				[given_name] => First
-				[family_name] => Name
-				[zip] => 66666
-			)
+### `$oClient->getOrder(string $idealoOrderId): array`
 
-		[billing_address] => Array
-			(
-				[address1] => Straße 123
-				[address2] => 
-				[city] => Ort
-				[country] => DE
-				[given_name] => First
-				[family_name] => Name
-				[zip] => 66666
-			)
+Get a specific order by idealoOrderId:
 
-		[line_items] => Array
-			(
-				[0] => Array
-					(
-						[price] => 225.99
-						[quantity] => 1
-						[sku] => ABC234
-						[title] => Canon EOS 700D + 18-55 IS STM
-					)
+	{
+        "idealoOrderId" : "A1B2C3D4",
+        "merchantOrderNumber" : "1234ABC",
+        "created" : "2021-01-01T00:00:00Z",
+        "updated" : "2021-01-01T00:00:00Z",
+        "status" : "PROCESSING",
+        "currency" : "EUR",
+        "offersPrice" : "50.85",
+        "grossPrice" : "53.84",
+        "shippingCosts" : "2.99",
+        "lineItems" : [ 
+            {
+                "title" : "Example product 1",
+                "price" : "30.55",
+                "priceRangeAmount" : "1.44",
+                "quantity" : 1,
+                "sku" : "product-sku-12345",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            }, 
+            {
+                "title" : "Example product 2",
+                "price" : "10.15",
+                "quantity" : 2,
+                "sku" : "product-sku-5648",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            } 
+        ],
+        "customer" : {
+            "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+            "phone" : "030-1231234"
+        },
+        "payment" : {
+            "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+            "transactionId" : "acb-123"
+        },
+        "billingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "shippingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "fulfillment" : {
+            "method" : "FORWARDING",
+            "tracking" : [ {
+                "code" : "xyz1234",
+                "carrier" : "Cargo"
+            } ],
+            "options" : [ {
+                "forwardOption" : "TWO_MAN_DELIVERY",
+                "price" : "2.99"
+            } ]
+        },
+        "refunds" : [ {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:43:34.090744Z",
+            "updated" : "2021-09-08T09:43:34.090744Z"
+        } ],
+        "voucher" : {
+            "code" : "FXWFGE (30%, max. 5 EUR)"
+        }
+    }
 
-			)
+___
 
-		[fulfillment] => Array
-			(
-				[type] => POSTAL
-				[carrier] => 
-				[transaction_code] => 
-				[fulfillment_options] => Array
-					(
-					)
+### `$oClient->getNewOrder(): array`
 
-			)
+    {
+        "idealoOrderId" : "A1B2C3D4",
+        "merchantOrderNumber" : "1234ABC",
+        "created" : "2021-01-01T00:00:00Z",
+        "updated" : "2021-01-01T00:00:00Z",
+        "status" : "PROCESSING",
+        "currency" : "EUR",
+        "offersPrice" : "50.85",
+        "grossPrice" : "53.84",
+        "shippingCosts" : "2.99",
+        "lineItems" : [
+            {
+                "title" : "Example product 1",
+                "price" : "30.55",
+                "priceRangeAmount" : "1.44",
+                "quantity" : 1,
+                "sku" : "product-sku-12345",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            }, 
+            {
+                "title" : "Example product 2",
+                "price" : "10.15",
+                "quantity" : 2,
+                "sku" : "product-sku-5648",
+                "merchantId" : "merchant_12345",
+                "merchantName" : "Example Electronics Ltd",
+                "merchantDeliveryText" : "Delivered within 3 working days"
+            } 
+        ],
+        "customer" : {
+            "email" : "m-zvvtu596gbz00t0@checkout.idealo.de",
+            "phone" : "030-1231234"
+        },
+        "payment" : {
+            "paymentMethod" : "IDEALO_CHECKOUT_PAYMENTS",
+            "transactionId" : "acb-123"
+        },
+        "billingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "shippingAddress" : {
+            "salutation" : "MR",
+            "firstName" : "Max",
+            "lastName" : "Mustermann",
+            "addressLine1" : "Ritterstraße 11",
+            "addressLine2" : "c/o idealo",
+            "postalCode" : "10969",
+            "city" : "Berlin",
+            "countryCode" : "DE"
+        },
+        "fulfillment" : {
+            "method" : "FORWARDING",
+            "tracking" : [ {
+                "code" : "xyz1234",
+                "carrier" : "Cargo"
+            } ],
+            "options" : [ {
+                "forwardOption" : "TWO_MAN_DELIVERY",
+                "price" : "2.99"
+            } ]
+        },
+        "refunds" : [ {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:43:33.433517Z",
+            "updated" : "2021-09-08T09:43:33.433518Z"
+        } ],
+        "voucher" : {
+            "code" : "FXWFGE (30%, max. 5 EUR)"
+        }
+    }
 
-		[payment] => Array
-			(
-				[payment_method] => CREDITCARD
-				[transaction_id] => snakeoil-f026e9c
-			)
+### `$oClient->setMerchantOrderNumber(string $idealoOrderId, string $merchantOrderNumber): array`
 
-	)
+    No body returned for response
 
+___
 
-### `$oClient->getSupportedPaymentTypes()` 
+### `$oClient->setFulfillmentInformation(string $idealoOrderId, string $carrier, array $trackingCode): array`
 
-Delivers all currently support payment types in the following format:
+    No body returned for response
 
-	Array
-	(
-		[CREDITCARD] => Credit Card Payment Method (Heidelpay)
-		[SOFORT] => SOFORT Überweisung Payment Method
-		[PAYPAL] => PayPal Payment Method
-	)
+___
 
-### `$oClient->sendOrderNr($sIdealoOrderNr, $sShopOrderNr)` 
+### `$oClient->setOrderRevoke(string $idealoOrderId, ?string $sku, int $remainingQuantity, string $reason, ?string $comment): array`
 
-#### Parameters
+    No body returned for response
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sShopOrderNr` - The order-nr this idealo order received in your shop.
+___
 
-This request transmits and connects the order-number from your shop-system to the idealo-order.
+### `$oClient->setRefundForOrder(string $idealoOrderId, float $refundAmount, string $currency): array`
 
-### `sendFulfillmentStatus($sIdealoOrderNr, $sTrackingCode, $sCarrier)`
+    No body returned for response
 
-#### Parameters
+#### Example response for invalid requests
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sTrackingCode` (optional) - The trackingcode for the current order
-`sCarrier` (optional) - The shipping-carrier for the current order ( DHL, DPD, UPS, FedEx, ...)
+    {
+        "type" : "about:blank",
+        "title" : "This order is not refundable as it was not paid using 'IDEALO_CHECKOUT_PAYMENTS'.",
+        "instance" : "https://orders.idealo.com/api/v2/shops/12345/orders/A1B2C3D4/refunds",
+        "reason" : "ORDER_NOT_PAID_USING_IDEALO_CHECKOUT_PAYMENTS"
+    }
 
-This request marks the order in idealo as shipped and adds trackingcode and carrier information to the order.
+Reason | Description
+--- | ---- |
+ORDER_NOT_PAID_USING_IDEALO_CHECKOUT_PAYMENTS | Occurs if the order has not been paid by IDEALO_CHECKOUT_PAYMENTS
+REFUND_PERIOD_EXCEEDED | Occurs if the order is older than 60 days and has been in the state COMPLETED.
+REFUND_AMOUNT_EXCEEDS_ORDER_PRICE | Occurs if the sum of all refunds exceeds the total price of the order
 
-### `sendRevocationStatus($sIdealoOrderNr, $sReason, $sComment)` 
+___
 
-#### Parameters
+### `$oClient->getRefunds(string $idealoOrderId): array`
 
-`sIdealoOrderNr` - The order-nr you got from idealo in the "order_number" from the getOrders request
-`sReason` - The reason of revocation - can be "CUSTOMER_REVOKE", "MERCHANT_DECLINE" or "RETOUR"
-`sComment` (optional) - A 255 digit text with a comment from the merchant
-
-
-For more information concerning the requests, have a look at the API documentation and developer guide.
+    [ 
+        {
+            "refundId" : "example-refund-id",
+            "refundTransactionId" : "example-refund-transaction-id",
+            "status" : "OPEN",
+            "currency" : "EUR",
+            "refundAmount" : 1.99,
+            "created" : "2021-09-08T09:41:39.887112Z",
+            "updated" : "2021-09-08T09:41:39.887115Z"
+        } 
+    ]
 
 ## Error-handling
 
@@ -187,9 +401,3 @@ In the idealo API documentation, you can find a list with the HTTP status error-
 ### Logging
 
 Errors will be logged to the default webserver error log.
-
-### Testing
-
-You can configure a direct link to a test-file filled with json-encoded orders like you would receive them directly from the API.
-You have to enter the link in the "$sDebugDirectUrl" parameter in the idealo/Direktkauf/REST/Client.php file for example like this:
-"http://*YOUR_SERVER_HERE*/order_test_file.txt"
