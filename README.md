@@ -16,7 +16,7 @@ ___
 
 ## Introduction
 
-This is not an official library update for the Orders API v2 from Idealo, but from Uhrenlounge Dresden!
+This is not an official library update for the Orders API v2 from Idealo, but from Aika Juweliere GmbH.
 
 The implementation of the idealo SDK is  easy and straightforward.
 Please test and integrate this SDK only with Idealo's sandbox environment. Generate an appropriate key on the Idealo Business page.
@@ -380,24 +380,3 @@ ___
             "updated" : "2021-09-08T09:41:39.887115Z"
         } 
     ]
-
-## Error-handling
-
-The client will return FALSE when any of the above listed requests failed with a CURL-error.
-
-You can access the information to this error for logging purposes or whatever you need them for, with the following methods:
-
-	$oClient->getCurlError()` // error-message from CURL
-	$oClient->getCurlErrno()` // error-number from CURL
-
-In any case you can get the HTTP status code from the last request with the following method:
-
-	$oClient->getHttpStatus()
-
-When this method returns 200 everything was ok with the last request.
-
-In the idealo API documentation, you can find a list with the HTTP status error-codes and their meanings for every request.
-
-### Logging
-
-Errors will be logged to the default webserver error log.
