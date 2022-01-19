@@ -20,9 +20,7 @@ namespace idealo\Direktkauf\REST;
 
 class Clientv2
 {
-
-    //TODO: Add live url later
-    protected const API_LIVE_URL = '';
+    protected const API_LIVE_URL = 'https://orders.idealo.com/api/v2/';
     protected const API_TEST_URL = 'https://orders-sandbox.idealo.com/api/v2/';
 
     protected string $client;
